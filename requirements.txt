@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+python-multipart
+pydantic
+pillow
+ollama
+mangum
+google-generativeai
+firebase-admin

@@ -1,0 +1,62 @@
+{
+  "rules": {
+    "auth_uid_index": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid)",
+        ".write": "!data.exists() || (auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid))",
+        "password": {
+          ".read": true
+        },
+        "created_at": {
+          ".read": true
+        }
+      }
+    },
+    "sessions": {
+      "$uid": {
+        ".read": "auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid)",
+        ".write": "auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid)"
+      }
+    },
+    "chats": {
+      "$uid": {
+        ".read": "auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid)",
+        ".write": "auth != null && ((auth.token.email != null && auth.token.email == ($uid + '@zentiq.local')) || root.child('auth_uid_index').child(auth.uid).val() == $uid)"
+      }
+    },
+    "feedback": {
+      "$feedbackId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "settings": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "devices": {
+      "$deviceId": {
+        ".read": true,
+        ".write": "!data.exists() || auth != null"
+      }
+    },
+    "recovery_codes": {
+      "$code": {
+        ".read": true,
+        ".write": "!data.exists() || auth != null"
+      }
+    },
+    "usernames": {
+      "$username": {
+        ".read": true,
+        ".write": "!data.exists() || auth != null"
+      }
+    }
+  }
+}
