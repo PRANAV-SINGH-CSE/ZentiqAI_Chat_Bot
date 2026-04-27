@@ -3993,8 +3993,18 @@ textarea#msg-input::-webkit-scrollbar-thumb {
     justify-content: center;
     align-self: flex-end;
     margin: 0 0 7px 0;
-    font-size: 1.15rem;
+    font-size: 0;
     font-weight: 700;
+}
+
+.controls #send-btn::after {
+    content: "\27A4";
+    position: relative;
+    z-index: 1;
+    font-size: 1.15rem;
+    line-height: 1;
+    transform: translateX(1px);
+    pointer-events: none;
 }
 
 @media (max-width: 768px) {
@@ -4030,8 +4040,12 @@ textarea#msg-input::-webkit-scrollbar-thumb {
         width: 40px;
         min-width: 40px;
         height: 40px;
-        font-size: 1rem;
+        font-size: 0;
         margin-bottom: 4px;
+    }
+
+    .controls #send-btn::after {
+        font-size: 1rem;
     }
 }
 
