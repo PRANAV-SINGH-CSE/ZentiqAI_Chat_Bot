@@ -3999,11 +3999,13 @@ textarea#msg-input::-webkit-scrollbar-thumb {
 
 .controls #send-btn::after {
     content: "\27A4";
-    position: relative;
+    position: absolute;
+    top: 50%;
+    left: 50%;
     z-index: 1;
     font-size: 1.15rem;
     line-height: 1;
-    transform: translateX(1px);
+    transform: translate(-50%, -50%);
     pointer-events: none;
 }
 
