@@ -3472,10 +3472,27 @@ textarea#msg-input::-webkit-scrollbar-thumb {
     font-size: 2.35rem;
     margin: 0;
     text-align: left;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    -webkit-text-fill-color: initial;
+}
+
+.sidebar-brand-text {
+    display: inline-block;
     background: linear-gradient(180deg, #9e8aff, #8569ff);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.sidebar-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(158, 138, 255, 0.55));
 }
 
 .sidebar-brand-row {
