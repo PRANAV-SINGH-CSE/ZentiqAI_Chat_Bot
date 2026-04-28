@@ -733,8 +733,8 @@ async def swift_chat_endpoint(req: ChatRequest, x_auth: str = Header(None)):
         "content": req.message or "Respond to this.",
     }
     
-    # Very small context for speed and 30k tokens per min limit (max 4 context messages)
-    SWIFT_CONTEXT_MESSAGES = 4
+    # Very small context for speed and 30k tokens per min limit (max 10 context messages)
+    SWIFT_CONTEXT_MESSAGES = 10
     
     history.append(user_msg)
     history[:] = history[-MAX_HISTORY:]
