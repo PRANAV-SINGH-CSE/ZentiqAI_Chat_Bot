@@ -28,6 +28,8 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN", "my-secret-key")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 PORT = int(os.getenv("PORT", "8080"))
 USE_FIREBASE = os.getenv("USE_FIREBASE", "true").lower() == "true"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+import requests
 
 # Security Configuration
 MASTER_PASSWORD = os.getenv("MASTER_PASSWORD", "")
@@ -718,6 +720,93 @@ async def chat_endpoint(req: ChatRequest, x_auth: str = Header(None)):
         raise
     except Exception as e:
         raise HTTPException(500, f"Error processing request: {str(e)}") from e
+
+
+@app.post("/api/swift-chat")
+async def swift_chat_endpoint(req: ChatRequest, x_auth: str = Header(None)):
+    check_auth(x_auth)
+    
+    history = get_session(req.session_id)
+    
+    user_msg = {
+        "role": "user", 
+        "content": req.message or "Respond to this.",
+    }
+    
+    # Very small context for speed and 30k tokens per min limit (max 4 context messages)
+    SWIFT_CONTEXT_MESSAGES = 4
+    
+    history.append(user_msg)
+    history[:] = history[-MAX_HISTORY:]
+
+    try:
+        if not GROQ_API_KEY:
+            raise HTTPException(503, "SwiftChat requires GROQ_API_KEY. No API keys configured.")
+            
+        print(f"⚡ Processing SwiftChat query with Groq API...")
+        
+        # Build conversation history
+        last_context_messages = history[-(SWIFT_CONTEXT_MESSAGES + 1):-1] if len(history) > SWIFT_CONTEXT_MESSAGES else history[:-1]
+        
+        conversation_context = []
+        # Add system prompt for SwiftChat
+        conversation_context.append({"role": "system", "content": "You are ZentiqAI SwiftChat Assistant. You use the Groq Llama 4 API. Keep your answers extremely fast, concise, accurate, and straight to the point."})
+        
+        for msg in last_context_messages:
+            if msg.get("role") in ["user", "assistant", "system", "model"]:
+                role = "assistant" if msg.get("role") == "model" else msg.get("role")
+                if role == "system" and len(conversation_context) > 1:
+                    continue
+                content = msg.get("content", "")
+                if content:
+                    conversation_context.append({"role": role, "content": content})
+                    
+        # Add current message
+        conversation_context.append({"role": "user", "content": user_msg["content"]})
+        
+        def call_groq():
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama-4-scout-17b-16e-instruct", # Using requested Groq/llama model
+                "messages": conversation_context,
+                "temperature": 0.5,
+                "max_tokens": 1024
+            }
+            
+            # fallback generic model if it fails
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            
+            # if model not found, try fallback
+            if response.status_code == 404 or (response.status_code == 400 and "model" in response.text.lower()):
+                payload["model"] = "llama-3.3-70b-versatile"
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                
+            if response.status_code != 200:
+                raise Exception(f"Groq API error: {response.text}")
+            return response.json()
+            
+        data = await asyncio.to_thread(call_groq)
+        
+        if "choices" in data and len(data["choices"]) > 0:
+            reply = data["choices"][0]["message"]["content"]
+        else:
+            raise Exception("Invalid response from Groq API")
+        
+        history.append({"role": "model", "content": reply})
+        save_history()
+        
+        return {"response": reply}
+        
+    except HTTPException:
+        history.pop()
+        raise
+    except Exception as e:
+        history.pop()
+        raise HTTPException(500, f"SwiftChat Error: {str(e)}")
 
 @app.post("/api/deep-research")
 async def deep_research_endpoint(req: ChatRequest, x_auth: str = Header(None)):

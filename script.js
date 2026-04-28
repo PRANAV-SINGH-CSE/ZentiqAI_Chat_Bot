@@ -2580,7 +2580,6 @@ async function initializeAppState() {
 
     if (isGuest) {
         currentSessionId = generateSessionId();
-        chatSessions[currentSessionId] = { name: "Guest Chat", timestamp: Date.now(), pinned: false };
         messageCache[currentSessionId] = []; 
         renderChatList();
     } else {
@@ -2652,7 +2651,7 @@ function setupSidebarSwipeClose() {
 
 async function createNewChat(shouldSave = true) {
     if (isSending) return;
-    if (currentSessionId && chatSessions[currentSessionId] && !hasMeaningfulConversation(currentSessionId)) {
+    if (currentSessionId && !hasMeaningfulConversation(currentSessionId)) {
         renderMessagesFromCache(currentSessionId);
         if (window.innerWidth <= 768) document.getElementById("sidebar")?.classList.remove("mobile-open");
         return;
@@ -2665,15 +2664,17 @@ async function createNewChat(shouldSave = true) {
         showInfoPopup("Chat Limit", "You can create up to 10 chats. Please delete a chat to create a new one.");
         return;
     }
+
     currentSessionId = generateSessionId();
-    chatSessions[currentSessionId] = { name: "New Chat", timestamp: Date.now(), pinned: false };
     messageCache[currentSessionId] = [];
-    renderChatList();
     renderMessagesFromCache(currentSessionId);
-    if (shouldSave && !isGuest) await saveSessionMetaToFirebase();
+
+    // New chat stays as a draft until first user message is sent.
+    // Keep chat list/meta untouched here.
+    if (window.innerWidth <= 768) document.getElementById("sidebar")?.classList.remove("mobile-open");
 }
 
-function updateBrandHeader(isDeepResearch = false) {
+function updateBrandHeader(mode = 'normal') {
     const brandHeader = document.querySelector('.brand-header');
     if (!brandHeader) return;
 
@@ -2700,16 +2701,36 @@ function updateBrandHeader(isDeepResearch = false) {
         localStorage.setItem(HEADER_COMPACT_KEY, '1');
     }
 
-    if (isDeepResearch) {
+    const headerModelBtn = document.getElementById('header-model-btn');
+    const currentModelName = document.getElementById('current-model-name');
+
+    if (mode === true || mode === 'deepResearch') {
         titleEl.textContent = '🔬 Deep Research Mode';
         if (subtitleEl) subtitleEl.style.display = 'none';
         if (glowEl) glowEl.style.display = 'none';
         brandHeader.classList.add('deep-mode');
+        brandHeader.classList.remove('swift-mode');
+        
+        if (headerModelBtn) headerModelBtn.style.pointerEvents = 'none';
+        if (currentModelName) currentModelName.textContent = '🔬 Gemini API';
+    } else if (mode === 'swiftChat') {
+        titleEl.textContent = '⚡ SwiftChat Mode';
+        if (subtitleEl) subtitleEl.style.display = 'none';
+        if (glowEl) glowEl.style.display = 'none';
+        brandHeader.classList.add('swift-mode');
+        brandHeader.classList.remove('deep-mode');
+        
+        if (headerModelBtn) headerModelBtn.style.pointerEvents = 'none';
+        if (currentModelName) currentModelName.textContent = '⚡ Groq (Llama 4)';
     } else {
         titleEl.textContent = useCompactHeader ? 'ZentiqAI' : 'Welcome to ZentiqAI';
         if (subtitleEl) subtitleEl.style.display = useCompactHeader ? 'none' : '';
         if (glowEl) glowEl.style.display = useCompactHeader ? 'none' : '';
         brandHeader.classList.remove('deep-mode');
+        brandHeader.classList.remove('swift-mode');
+        
+        if (headerModelBtn) headerModelBtn.style.pointerEvents = 'auto';
+        if (currentModelName) currentModelName.textContent = selectedChatModel || 'Select Model';
     }
 }
 
@@ -2722,6 +2743,18 @@ async function switchChat(id) {
         exitDeepResearchMode();
     }
     
+    // Exit swift chat mode
+    if (chatSessions[currentSessionId]?.isSwiftChat && !chatSessions[id]?.isSwiftChat) {
+        exitSwiftChatMode();
+    }
+    // Enter swift chat mode
+    if (chatSessions[id]?.isSwiftChat) {
+        swiftChatMode = true;
+        updateBrandHeader('swiftChat');
+    } else {
+        swiftChatMode = false;
+    }
+
     // Check if entering deep research mode
     if (id === deepResearchSessionId) {
         deepResearchMode = true;
@@ -2785,6 +2818,11 @@ async function sendMessage(e) {
         return;
     }
 
+    if (chatSessions[currentSessionId]?.isSwiftChat) {
+        await sendSwiftChatMessage(e);
+        return;
+    }
+
     if (isSending) {
         console.warn("⛔ BLOCKED: Wait for AI response.");
         return;
@@ -2796,6 +2834,22 @@ async function sendMessage(e) {
     const hasImage = !!pendingImageBase64;
 
     if (!text && !hasImage) return;
+
+    // Materialize draft chat in sidebar only when the user sends first message.
+    if (!currentSessionId) {
+        currentSessionId = generateSessionId();
+    }
+    if (!chatSessions[currentSessionId]) {
+        chatSessions[currentSessionId] = {
+            name: isGuest ? "Guest Chat" : "New Chat",
+            timestamp: Date.now(),
+            pinned: false
+        };
+        renderChatList();
+        if (!isGuest) {
+            await saveSessionMetaToFirebase();
+        }
+    }
 
     isSending = true;
     input.disabled = true;
@@ -3547,6 +3601,9 @@ function addMessageToUI(text, role, img, id, options = {}) {
     }
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
+    const swiftChatBtn = document.getElementById("swift-chat-btn");
+    if (swiftChatBtn) swiftChatBtn.addEventListener("click", enterSwiftChatMode);
+
     updateHomeEmptyState();
 }
 
@@ -3710,6 +3767,11 @@ async function startApp() {
         updateDeepResearchBadge();
         // Update button state based on guest mode
         updateDeepResearchButtonState();
+    }
+
+    const swiftChatBtn = document.getElementById("swift-chat-btn");
+    if (swiftChatBtn) {
+        swiftChatBtn.addEventListener("click", enterSwiftChatMode);
     }
 
     updateHomeEmptyState();
@@ -4459,6 +4521,10 @@ let deepResearchMode = false;
 let deepResearchSessionId = "deep-research-session";
 let deepResearchMessages = [];
 
+let swiftChatMode = false;
+let swiftChatSessionId = "swift-chat-session";
+
+
 // Load deep research message count from localStorage
 function getDeepResearchCount() {
     const today = new Date().toDateString();
@@ -4597,9 +4663,191 @@ function exitDeepResearchMode() {
     updateBrandHeader(false);
 }
 
+// ==========================================
+// SWIFTCHAT MODE
+// ==========================================
+
+async function enterSwiftChatMode() {
+    if (isGuest) {
+        showInfoPopup("Login Required", "🔒 SwiftChat Mode is a premium feature. Please login or create an account.");
+        return;
+    }
+    if (isSending) return;
+    if (!isGuest && Object.keys(chatSessions).length >= 10) {
+        showInfoPopup("Chat Limit", "You can create up to 10 chats. Please delete a chat to create a new one.");
+        return;
+    }
+    
+    deepResearchMode = false;
+    swiftChatMode = true;
+    
+    const newSessionId = "swift-" + generateSessionId();
+    currentSessionId = newSessionId;
+    
+    chatSessions[currentSessionId] = {
+        id: currentSessionId,
+        name: "⚡ Swift Chat",
+        createdAt: Date.now(),
+        timestamp: Date.now(),
+        pinned: false,
+        isSwiftChat: true
+    };
+    
+    messageCache[currentSessionId] = [];
+    
+    if (!isGuest && USE_FIREBASE && db) {
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js").then(({ set, ref }) => {
+            set(ref(db, `chats/${currentUser}/meta/${currentSessionId}`), chatSessions[currentSessionId]);
+        });
+    }
+    
+    const welcomeMsg = {
+        role: "model",
+        content: `⚡ **Welcome to SwiftChat Mode**
+
+Experience instant responses powered by the Groq Llama 4 API. This mode provides ultra-fast answers with a lightweight context window.
+
+Your message history is saved separately.`,
+        timestamp: Date.now(),
+        isSystemMessage: true
+    };
+    addToCache(currentSessionId, welcomeMsg);
+    
+    renderChatList();
+    updateActiveChatHighlight(currentSessionId);
+    
+    const chatBox = document.getElementById("chat-box");
+    if (chatBox) chatBox.innerHTML = "";
+    renderMessagesFromCache(currentSessionId);
+    
+    updateBrandHeader('swiftChat');
+    
+    if (window.innerWidth <= 768) {
+        document.getElementById("sidebar")?.classList.remove("mobile-open");
+    }
+}
+
+function exitSwiftChatMode() {
+    swiftChatMode = false;
+    updateBrandHeader(false);
+}
+
+async function sendSwiftChatMessage(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+
+    if (isSending) return;
+
+    const input = document.getElementById("msg-input");
+    const sendBtn = document.getElementById("send-btn");
+    const text = input.value.trim();
+    const hasImage = !!pendingImageBase64;
+
+    if (!text && !hasImage) return;
+
+    isSending = true;
+    input.disabled = true;
+    input.value = "";
+    autoResizeMessageInput(input);
+    if(sendBtn) {
+        sendBtn.classList.add("disabled");
+        sendBtn.style.pointerEvents = "none";
+    }
+
+    let loadingId;
+
+    try {
+        if (!API_BASE || !API_BASE.trim()) {
+            addMessageToUI("❌ Backend URL missing.", "model");
+            isSending = false;
+            input.disabled = false;
+            return;
+        }
+
+        const imageToSend = pendingImageBase64;
+        const userContent = text || "Analyze this image";
+        const userMsg = {
+            role: "user",
+            content: userContent,
+            timestamp: Date.now(),
+            hasImage,
+            image_base64: hasImage ? imageToSend : null
+        };
+        
+        addMessageToUI(text, "user", imageToSend);
+        const storedMsg = hasImage
+            ? { role: "user", content: userContent, timestamp: userMsg.timestamp, hasImage: true }
+            : userMsg;
+        addToCache(currentSessionId, storedMsg);
+        saveMessageToFirebase(currentSessionId, storedMsg);
+        localStorage.setItem('zentiq_header_compact', '1');
+        if (hasImage) clearImagePreview();
+
+        loadingId = "loading-" + Date.now();
+        addMessageToUI("⚡ Thinking swiftly...", "model loading-pulse", null, loadingId);
+
+        const response = await fetch(`${API_BASE}/api/swift-chat`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "ngrok-skip-browser-warning": "true"
+            },
+            body: JSON.stringify({ 
+                session_id: currentSessionId, 
+                message: text || "Analyze this image",
+                image_base64: imageToSend,
+                user_id: currentUser
+            })
+        }).catch(() => { throw new Error("Server Offline"); });
+
+        document.getElementById(loadingId)?.remove();
+
+        if (!response.ok) throw new Error("Server Offline");
+        const data = await response.json();
+
+        if (data.response) {
+            const botMsg = { 
+                role: "model", 
+                content: data.response, 
+                timestamp: Date.now() 
+            };
+            addMessageToUI(data.response, "model");
+            addToCache(currentSessionId, botMsg);
+            saveMessageToFirebase(currentSessionId, botMsg);
+            
+            if (serverOffline) enableMessageInput();
+        }
+
+    } catch (err) {
+        document.getElementById(loadingId)?.remove();
+        if (err.message.includes("Server Offline")) {
+            if (!serverOffline) handleServerOffline();
+            addMessageToUI("❌ Server is offline. Please try again later.", "model");
+        } else {
+            addMessageToUI("Error: " + err.message, "model");
+        }
+    } finally {
+        isSending = false;
+        if (!serverOffline) {
+            input.disabled = false;
+            autoResizeMessageInput(input);
+            if (shouldAutoFocusMessageInput()) input.focus();
+            if(sendBtn) {
+                sendBtn.classList.remove("disabled");
+                sendBtn.style.pointerEvents = "auto";
+            }
+        }
+    }
+}
+
+
 // Deep research message sender (uses Gemini API)
 async function sendDeepResearchMessage(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+
+    if (chatSessions[currentSessionId]?.isSwiftChat) {
+        await sendSwiftChatMessage(e);
+        return;
+    }
 
     if (isSending) {
         console.warn("⛔ BLOCKED: Wait for AI response.");
@@ -4759,5 +5007,7 @@ window.openDeepResearchPopup = openDeepResearchPopup;
 window.closeDeepResearchPopup = closeDeepResearchPopup;
 window.enterDeepResearchMode = enterDeepResearchMode;
 window.exitDeepResearchMode = exitDeepResearchMode;
+window.enterSwiftChatMode = enterSwiftChatMode;
+window.exitSwiftChatMode = exitSwiftChatMode;
 window.debugCreateTestUser = debugCreateTestUser;
 window.debugListAllUsers = debugListAllUsers;
