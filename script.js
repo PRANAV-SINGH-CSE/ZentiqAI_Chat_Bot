@@ -635,7 +635,7 @@ function autoResizeMessageInput(input) {
     input.style.height = "auto";
     const isMobile = window.innerWidth <= 768;
     const baseHeight = isMobile ? 44 : 64;
-    const maxHeight = isMobile ? 120 : 180;
+    const maxHeight = isMobile ? 220 : 320;
     const nextHeight = Math.min(input.scrollHeight, maxHeight);
     input.style.height = `${nextHeight}px`;
     input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
@@ -4683,24 +4683,11 @@ async function enterSwiftChatMode() {
     
     const newSessionId = "swift-" + generateSessionId();
     currentSessionId = newSessionId;
-    
-    chatSessions[currentSessionId] = {
-        id: currentSessionId,
-        name: "⚡ Swift Chat",
-        createdAt: Date.now(),
-        timestamp: Date.now(),
-        pinned: false,
-        isSwiftChat: true
-    };
-    
+
+    // SwiftChat starts as a draft session and is only created in chat list
+    // when the user sends the first message.
     messageCache[currentSessionId] = [];
-    
-    if (!isGuest && USE_FIREBASE && db) {
-        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js").then(({ set, ref }) => {
-            set(ref(db, `chats/${currentUser}/meta/${currentSessionId}`), chatSessions[currentSessionId]);
-        });
-    }
-    
+
     const welcomeMsg = {
         role: "model",
         content: `⚡ **Welcome to SwiftChat Mode**
@@ -4712,9 +4699,8 @@ Your message history is saved separately.`,
         isSystemMessage: true
     };
     addToCache(currentSessionId, welcomeMsg);
-    
+
     renderChatList();
-    updateActiveChatHighlight(currentSessionId);
     
     const chatBox = document.getElementById("chat-box");
     if (chatBox) chatBox.innerHTML = "";
@@ -4743,6 +4729,33 @@ async function sendSwiftChatMessage(e) {
     const hasImage = !!pendingImageBase64;
 
     if (!text && !hasImage) return;
+
+    // Materialize SwiftChat draft only when first user message is sent.
+    if (!currentSessionId) {
+        currentSessionId = "swift-" + generateSessionId();
+    }
+    if (!chatSessions[currentSessionId]) {
+        if (!isGuest && Object.keys(chatSessions).length >= 10) {
+            showInfoPopup("Chat Limit", "You can create up to 10 chats. Please delete a chat to create a new one.");
+            return;
+        }
+
+        chatSessions[currentSessionId] = {
+            id: currentSessionId,
+            name: "⚡ Swift Chat",
+            createdAt: Date.now(),
+            timestamp: Date.now(),
+            pinned: false,
+            isSwiftChat: true
+        };
+
+        renderChatList();
+        updateActiveChatHighlight(currentSessionId);
+
+        if (!isGuest && USE_FIREBASE && db) {
+            await saveSessionMetaToFirebase();
+        }
+    }
 
     isSending = true;
     input.disabled = true;
