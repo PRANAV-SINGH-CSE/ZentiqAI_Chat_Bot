@@ -4002,9 +4002,9 @@ textarea#msg-input::-webkit-scrollbar-thumb {
 }
 
 .main-content #chat-box .message.model {
-    align-self: center !important;
+    align-self: flex-start !important;
     margin-right: auto !important;
-    margin-left: auto !important;
+    margin-left: calc((100% - min(94%, 980px)) / 2) !important;
     max-width: min(94%, 980px) !important;
 }
 

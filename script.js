@@ -4707,10 +4707,10 @@ async function enterSwiftChatMode() {
     deepResearchMode = false;
     swiftChatMode = true;
     
-    const newSessionId = "swift-" + generateSessionId();
-    currentSessionId = newSessionId;
+    // Keep SwiftChat as a draft until the first user message is sent.
+    // The real sidebar entry is created in sendSwiftChatMessage().
+    currentSessionId = "swift-" + generateSessionId();
 
-    // Initialize in both messageCache and chatSessions
     messageCache[currentSessionId] = [];
     chatSessions[currentSessionId] = {
         id: currentSessionId,
@@ -4733,15 +4733,15 @@ Your message history is saved separately.`,
     };
     addToCache(currentSessionId, welcomeMsg);
 
+    messageCache[currentSessionId] = [];
+    delete chatSessions[currentSessionId];
+
     renderChatList();
-    // Persist SwiftChat session meta immediately for logged-in users
-    if (!isGuest && USE_FIREBASE && db) {
-        try { await saveSessionMetaToFirebase(); } catch (e) { /* ignore */ }
-    }
     
     const chatBox = document.getElementById("chat-box");
     if (chatBox) chatBox.innerHTML = "";
-    renderMessagesFromCache(currentSessionId);
+    updateActiveChatHighlight(currentSessionId);
+    updateHomeEmptyState();
     
     updateBrandHeader('swiftChat');
     
@@ -4854,6 +4854,11 @@ async function sendSwiftChatMessage(e) {
             ? { role: "user", content: userContent, timestamp: userMsg.timestamp, hasImage: true }
             : userMsg;
         addToCache(currentSessionId, storedMsg);
+        if (chatSessions[currentSessionId]) {
+            chatSessions[currentSessionId].timestamp = userMsg.timestamp;
+            renderChatList();
+            updateActiveChatHighlight(currentSessionId);
+        }
         saveMessageToFirebase(currentSessionId, storedMsg);
         localStorage.setItem('zentiq_header_compact', '1');
         if (hasImage) clearImagePreview();
