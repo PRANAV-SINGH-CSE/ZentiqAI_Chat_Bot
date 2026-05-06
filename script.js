@@ -635,7 +635,7 @@ function autoResizeMessageInput(input) {
     input.style.height = "auto";
     const isMobile = window.innerWidth <= 768;
     const baseHeight = isMobile ? 44 : 64;
-    const maxHeight = isMobile ? 220 : 320;
+    const maxHeight = isMobile ? 320 : 460;
     const nextHeight = Math.min(input.scrollHeight, maxHeight);
     input.style.height = `${nextHeight}px`;
     input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
