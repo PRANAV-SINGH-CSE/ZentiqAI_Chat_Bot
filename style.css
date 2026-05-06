@@ -1079,10 +1079,10 @@ html, body {
 #chat-box::-webkit-scrollbar { display: none; }
 
 .message {
-    padding: 16px 24px;
+    padding: 10px 16px;
     border-radius: 20px;
     font-size: 1.05rem;
-    line-height: 1.6;
+    line-height: 1.45;
     animation: fadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     max-width: 80%;
     width: fit-content;
@@ -2595,7 +2595,7 @@ body {
     width: 100%;
     max-width: 100%;
     margin: 0;
-    padding: 18px 22px;
+    padding: 12px 16px;
     border-radius: 16px;
     border: 1px solid rgba(162, 116, 255, 0.55);
     border-top: 1px solid rgba(214, 178, 255, 0.8);
