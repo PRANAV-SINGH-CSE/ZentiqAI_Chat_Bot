@@ -3972,8 +3972,8 @@ textarea#msg-input::-webkit-scrollbar-thumb {
 
 /* Final chat bubble sizing/layout fix */
 .main-content #chat-box {
-    width: min(100%, 800px) !important;
-    max-width: 800px !important;
+    width: min(100%, 1120px) !important;
+    max-width: 1120px !important;
     align-self: center !important;
     margin: 0 auto !important;
     box-sizing: border-box !important;
@@ -3984,7 +3984,7 @@ textarea#msg-input::-webkit-scrollbar-thumb {
     width: auto !important;
     height: auto !important;
     min-height: 0 !important;
-    max-width: min(84%, 760px) !important;
+    max-width: min(92%, 960px) !important;
     padding: 14px 18px !important;
     margin-bottom: 14px !important;
     line-height: 1.55 !important;
@@ -4005,6 +4005,7 @@ textarea#msg-input::-webkit-scrollbar-thumb {
     align-self: flex-start !important;
     margin-right: auto !important;
     margin-left: 0 !important;
+    max-width: min(94%, 980px) !important;
 }
 
 .main-content #chat-box .message.model.loading-pulse {
