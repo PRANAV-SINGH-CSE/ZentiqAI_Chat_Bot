@@ -2818,7 +2818,7 @@ async function sendMessage(e) {
         return;
     }
 
-    if (chatSessions[currentSessionId]?.isSwiftChat) {
+    if (swiftChatMode) {
         await sendSwiftChatMessage(e);
         return;
     }
@@ -4684,9 +4684,16 @@ async function enterSwiftChatMode() {
     const newSessionId = "swift-" + generateSessionId();
     currentSessionId = newSessionId;
 
-    // SwiftChat starts as a draft session and is only created in chat list
-    // when the user sends the first message.
+    // Initialize in both messageCache and chatSessions
     messageCache[currentSessionId] = [];
+    chatSessions[currentSessionId] = {
+        id: currentSessionId,
+        name: "⚡ Swift Chat",
+        createdAt: Date.now(),
+        timestamp: Date.now(),
+        pinned: false,
+        isSwiftChat: true
+    };
 
     const welcomeMsg = {
         role: "model",
