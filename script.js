@@ -3596,6 +3596,7 @@ function typeMessageFast(targetEl, fullText, chatBox, speed = 2.2) {
 function addMessageToUI(text, role, img, id, options = {}) {
     const box = document.getElementById("chat-box");
     if (!box) return;
+    const displayText = typeof text === "string" ? text.trim() : text;
     const emptyHint = document.getElementById("empty-chat-hint");
     if (emptyHint) emptyHint.remove();
     const div = document.createElement("div");
@@ -3607,10 +3608,10 @@ function addMessageToUI(text, role, img, id, options = {}) {
         imgEl.alt = "attachment";
         imgEl.className = "chat-image";
         div.appendChild(imgEl);
-        if (text && text.trim().length > 0) {
+        if (displayText && String(displayText).trim().length > 0) {
             const caption = document.createElement("div");
             caption.className = "chat-image-caption";
-            caption.textContent = text;
+            caption.textContent = displayText;
             div.appendChild(caption);
         }
     } else {
@@ -3620,10 +3621,10 @@ function addMessageToUI(text, role, img, id, options = {}) {
             div.textContent = "";
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
-            typeMessageFast(div, text, box, options.speed || 2.2);
+            typeMessageFast(div, displayText, box, options.speed || 2.2);
             return;
         }
-        div.textContent = text;
+        div.textContent = displayText;
     }
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
