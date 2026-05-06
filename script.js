@@ -1018,6 +1018,12 @@ function clearImagePreview() {
 }
 
 function handleImageSelection(e) {
+    // Prevent image attachments when in SwiftChat mode
+    if (swiftChatMode) {
+        showInfoPopup("Images Disabled", "Image attachments are disabled in SwiftChat Mode.");
+        if (e && e.target) e.target.value = "";
+        return;
+    }
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
@@ -2751,8 +2757,28 @@ async function switchChat(id) {
     if (chatSessions[id]?.isSwiftChat) {
         swiftChatMode = true;
         updateBrandHeader('swiftChat');
+        // Disable image controls when entering swift chat via switch
+        try {
+            const imgInput = document.getElementById("img-input");
+            const imgUploadBtn = document.getElementById("img-upload-btn");
+            if (imgInput) imgInput.disabled = true;
+            if (imgUploadBtn) {
+                imgUploadBtn.classList.add("disabled");
+                imgUploadBtn.style.pointerEvents = "none";
+            }
+        } catch (e) {}
     } else {
         swiftChatMode = false;
+        // Re-enable image controls when leaving swift chat (respect server state)
+        try {
+            const imgInput = document.getElementById("img-input");
+            const imgUploadBtn = document.getElementById("img-upload-btn");
+            if (imgInput && !serverOffline) imgInput.disabled = false;
+            if (imgUploadBtn) {
+                imgUploadBtn.classList.remove("disabled");
+                imgUploadBtn.style.pointerEvents = serverOffline ? "none" : "auto";
+            }
+        } catch (e) {}
     }
 
     // Check if entering deep research mode
@@ -4708,6 +4734,10 @@ Your message history is saved separately.`,
     addToCache(currentSessionId, welcomeMsg);
 
     renderChatList();
+    // Persist SwiftChat session meta immediately for logged-in users
+    if (!isGuest && USE_FIREBASE && db) {
+        try { await saveSessionMetaToFirebase(); } catch (e) { /* ignore */ }
+    }
     
     const chatBox = document.getElementById("chat-box");
     if (chatBox) chatBox.innerHTML = "";
@@ -4718,11 +4748,37 @@ Your message history is saved separately.`,
     if (window.innerWidth <= 768) {
         document.getElementById("sidebar")?.classList.remove("mobile-open");
     }
+
+    // Disable image upload controls in SwiftChat mode
+    try {
+        const imgInput = document.getElementById("img-input");
+        const imgUploadBtn = document.getElementById("img-upload-btn");
+        if (imgInput) imgInput.disabled = true;
+        if (imgUploadBtn) {
+            imgUploadBtn.classList.add("disabled");
+            imgUploadBtn.style.pointerEvents = "none";
+        }
+    } catch (e) {
+        // ignore
+    }
 }
 
 function exitSwiftChatMode() {
     swiftChatMode = false;
     updateBrandHeader(false);
+
+    // Re-enable image upload controls when exiting SwiftChat (unless server offline)
+    try {
+        const imgInput = document.getElementById("img-input");
+        const imgUploadBtn = document.getElementById("img-upload-btn");
+        if (imgInput && !serverOffline) imgInput.disabled = false;
+        if (imgUploadBtn) {
+            imgUploadBtn.classList.remove("disabled");
+            imgUploadBtn.style.pointerEvents = serverOffline ? "none" : "auto";
+        }
+    } catch (e) {
+        // ignore
+    }
 }
 
 async function sendSwiftChatMessage(e) {
