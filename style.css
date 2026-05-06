@@ -4009,6 +4009,9 @@ textarea#msg-input::-webkit-scrollbar-thumb {
 }
 
 .main-content #chat-box .message.model.loading-pulse {
+    align-self: flex-start !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
     padding-top: 16px !important;
     padding-bottom: 16px !important;
 }
