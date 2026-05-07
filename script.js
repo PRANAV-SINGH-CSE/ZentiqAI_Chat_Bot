@@ -562,6 +562,7 @@ function handleServerOffline() {
         imgUploadBtn.classList.add("disabled");
         imgUploadBtn.style.pointerEvents = "none";
     }
+    updateComposerModeControls();
 
     showServerAlert(
         "Server Offline",
@@ -588,6 +589,7 @@ function enableMessageInput() {
         imgUploadBtn.classList.remove("disabled");
         imgUploadBtn.style.pointerEvents = "auto";
     }
+    updateComposerModeControls();
 
     autoResizeMessageInput(msgInput);
 
@@ -1068,6 +1070,52 @@ function handleImageSelection(e) {
         clearImagePreview();
     };
     reader.readAsDataURL(file);
+}
+
+function updateComposerModeControls() {
+    const main = document.querySelector(".main-content");
+    const imgInput = document.getElementById("img-input");
+    const imgUploadBtn = document.getElementById("img-upload-btn");
+
+    if (main) {
+        main.classList.toggle("swift-chat-state", !!swiftChatMode);
+    }
+
+    if (!imgUploadBtn) return;
+
+    if (swiftChatMode) {
+        if (imgInput) imgInput.disabled = true;
+        imgUploadBtn.classList.add("swift-mode");
+        imgUploadBtn.classList.remove("disabled");
+        imgUploadBtn.style.pointerEvents = "auto";
+        imgUploadBtn.textContent = "☰";
+        imgUploadBtn.setAttribute("aria-label", "Open SwiftChat model list");
+        imgUploadBtn.setAttribute("title", "Open SwiftChat model list");
+    } else {
+        if (imgInput && !serverOffline) imgInput.disabled = false;
+        imgUploadBtn.classList.remove("swift-mode");
+        imgUploadBtn.classList.toggle("disabled", !!serverOffline);
+        imgUploadBtn.style.pointerEvents = serverOffline ? "none" : "auto";
+        imgUploadBtn.textContent = "🔗";
+        imgUploadBtn.setAttribute("aria-label", "Attach image");
+        imgUploadBtn.setAttribute("title", "Attach image");
+        closeSwiftModelDropup();
+    }
+}
+
+function handleComposerLeftButtonClick(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (swiftChatMode) {
+        toggleSwiftModelDropup();
+        return;
+    }
+
+    const imgInput = document.getElementById("img-input");
+    if (imgInput && !imgInput.disabled) imgInput.click();
 }
 
 function showAuthError(element, message) {
@@ -2758,29 +2806,12 @@ async function switchChat(id) {
         swiftChatMode = true;
         updateBrandHeader('swiftChat');
         showSwiftModelSelector();
-        // Disable image controls when entering swift chat via switch
-        try {
-            const imgInput = document.getElementById("img-input");
-            const imgUploadBtn = document.getElementById("img-upload-btn");
-            if (imgInput) imgInput.disabled = true;
-            if (imgUploadBtn) {
-                imgUploadBtn.classList.add("disabled");
-                imgUploadBtn.style.pointerEvents = "none";
-            }
-        } catch (e) {}
+        clearImagePreview();
+        updateComposerModeControls();
     } else {
         swiftChatMode = false;
         hideSwiftModelSelector();
-        // Re-enable image controls when leaving swift chat (respect server state)
-        try {
-            const imgInput = document.getElementById("img-input");
-            const imgUploadBtn = document.getElementById("img-upload-btn");
-            if (imgInput && !serverOffline) imgInput.disabled = false;
-            if (imgUploadBtn) {
-                imgUploadBtn.classList.remove("disabled");
-                imgUploadBtn.style.pointerEvents = serverOffline ? "none" : "auto";
-            }
-        } catch (e) {}
+        updateComposerModeControls();
     }
 
     // Check if entering deep research mode
@@ -4574,20 +4605,17 @@ function getSwiftModelDisplayName(modelId) {
 }
 
 function showSwiftModelSelector() {
-    const selector = document.getElementById("swift-model-selector");
-    if (selector) selector.classList.remove("hidden");
+    updateComposerModeControls();
 }
 
 function hideSwiftModelSelector() {
-    const selector = document.getElementById("swift-model-selector");
-    if (selector) selector.classList.add("hidden");
-    // Also close the dropup if open
+    updateComposerModeControls();
     closeSwiftModelDropup();
 }
 
 function toggleSwiftModelDropup() {
     const dropup = document.getElementById("swift-model-dropup");
-    const toggleBtn = document.getElementById("swift-model-toggle-btn");
+    const toggleBtn = document.getElementById("img-upload-btn");
     if (!dropup || !toggleBtn) return;
 
     const isOpen = dropup.classList.contains("open");
@@ -4602,7 +4630,7 @@ function toggleSwiftModelDropup() {
 
 function closeSwiftModelDropup() {
     const dropup = document.getElementById("swift-model-dropup");
-    const toggleBtn = document.getElementById("swift-model-toggle-btn");
+    const toggleBtn = document.getElementById("img-upload-btn");
     if (dropup) {
         dropup.classList.remove("open");
         dropup.classList.add("hidden");
@@ -4638,7 +4666,12 @@ function selectSwiftModel(modelId) {
 }
 
 function initSwiftModelSelector() {
-    // Toggle button
+    const uploadBtn = document.getElementById("img-upload-btn");
+    if (uploadBtn) {
+        uploadBtn.addEventListener("click", handleComposerLeftButtonClick);
+    }
+
+    // Compatibility for older markup that may still include a separate toggle button.
     const toggleBtn = document.getElementById("swift-model-toggle-btn");
     if (toggleBtn) {
         toggleBtn.addEventListener("click", (e) => {
@@ -4659,8 +4692,14 @@ function initSwiftModelSelector() {
 
     // Close dropup when clicking outside
     document.addEventListener("click", (e) => {
-        const selector = document.getElementById("swift-model-selector");
-        if (selector && !selector.contains(e.target)) {
+        const wrap = document.getElementById("swift-model-btn-wrap");
+        const dropup = document.getElementById("swift-model-dropup");
+        if (
+            dropup &&
+            dropup.classList.contains("open") &&
+            wrap &&
+            !wrap.contains(e.target)
+        ) {
             closeSwiftModelDropup();
         }
     });
@@ -4861,23 +4900,13 @@ Your message history is saved separately.`,
     
     updateBrandHeader('swiftChat');
     showSwiftModelSelector();
+    clearImagePreview();
     
     if (window.innerWidth <= 768) {
         document.getElementById("sidebar")?.classList.remove("mobile-open");
     }
 
-    // Disable image upload controls in SwiftChat mode
-    try {
-        const imgInput = document.getElementById("img-input");
-        const imgUploadBtn = document.getElementById("img-upload-btn");
-        if (imgInput) imgInput.disabled = true;
-        if (imgUploadBtn) {
-            imgUploadBtn.classList.add("disabled");
-            imgUploadBtn.style.pointerEvents = "none";
-        }
-    } catch (e) {
-        // ignore
-    }
+    updateComposerModeControls();
 }
 
 function exitSwiftChatMode() {
@@ -4885,18 +4914,7 @@ function exitSwiftChatMode() {
     updateBrandHeader(false);
     hideSwiftModelSelector();
 
-    // Re-enable image upload controls when exiting SwiftChat (unless server offline)
-    try {
-        const imgInput = document.getElementById("img-input");
-        const imgUploadBtn = document.getElementById("img-upload-btn");
-        if (imgInput && !serverOffline) imgInput.disabled = false;
-        if (imgUploadBtn) {
-            imgUploadBtn.classList.remove("disabled");
-            imgUploadBtn.style.pointerEvents = serverOffline ? "none" : "auto";
-        }
-    } catch (e) {
-        // ignore
-    }
+    updateComposerModeControls();
 }
 
 async function sendSwiftChatMessage(e) {
@@ -4907,9 +4925,9 @@ async function sendSwiftChatMessage(e) {
     const input = document.getElementById("msg-input");
     const sendBtn = document.getElementById("send-btn");
     const text = input.value.trim();
-    const hasImage = !!pendingImageBase64;
+    const hasImage = false;
 
-    if (!text && !hasImage) return;
+    if (!text) return;
 
     // Materialize SwiftChat draft only when first user message is sent.
     if (!currentSessionId) {
@@ -4957,8 +4975,8 @@ async function sendSwiftChatMessage(e) {
             return;
         }
 
-        const imageToSend = pendingImageBase64;
-        const userContent = text || "Analyze this image";
+        const imageToSend = null;
+        const userContent = text;
         const userMsg = {
             role: "user",
             content: userContent,
@@ -4968,9 +4986,7 @@ async function sendSwiftChatMessage(e) {
         };
         
         addMessageToUI(text, "user", imageToSend);
-        const storedMsg = hasImage
-            ? { role: "user", content: userContent, timestamp: userMsg.timestamp, hasImage: true }
-            : userMsg;
+        const storedMsg = userMsg;
         addToCache(currentSessionId, storedMsg);
         if (chatSessions[currentSessionId]) {
             chatSessions[currentSessionId].timestamp = userMsg.timestamp;
@@ -4992,7 +5008,7 @@ async function sendSwiftChatMessage(e) {
             },
             body: JSON.stringify({ 
                 session_id: currentSessionId, 
-                message: text || "Analyze this image",
+                message: text,
                 image_base64: imageToSend,
                 user_id: currentUser,
                 swift_model: selectedSwiftModel

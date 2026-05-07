@@ -403,90 +403,84 @@
             <div id="chat-box"></div>
 
             <div class="controls-container">
-                <!-- SwiftChat Model Selector Drop-up -->
-                <div id="swift-model-selector" class="swift-model-selector hidden">
-                    <div id="swift-model-dropup" class="swift-model-dropup hidden">
-                        <div class="swift-model-dropup-header">
-                            <span class="swift-model-dropup-title">⚡ Select Model</span>
-                        </div>
-                        <div class="swift-model-dropup-list" id="swift-model-list">
-                            <button class="swift-model-option active" data-model="meta-llama/llama-4-scout-17b-16e-instruct">
-                                <span class="swift-model-icon">🦙</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">Llama 4 Scout 17B</span>
-                                    <span class="swift-model-id">meta-llama/llama-4-scout-17b-16e-instruct</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="llama-3.3-70b-versatile">
-                                <span class="swift-model-icon">🦙</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">Llama 3.3 70B</span>
-                                    <span class="swift-model-id">llama-3.3-70b-versatile</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="meta-llama/llama-prompt-guard-2-22m">
-                                <span class="swift-model-icon">🛡️</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">Prompt Guard 2 22M</span>
-                                    <span class="swift-model-id">meta-llama/llama-prompt-guard-2-22m</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="meta-llama/llama-prompt-guard-2-86m">
-                                <span class="swift-model-icon">🛡️</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">Prompt Guard 2 86M</span>
-                                    <span class="swift-model-id">meta-llama/llama-prompt-guard-2-86m</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="openai/gpt-oss-120b">
-                                <span class="swift-model-icon">🤖</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">GPT OSS 120B</span>
-                                    <span class="swift-model-id">openai/gpt-oss-120b</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="openai/gpt-oss-20b">
-                                <span class="swift-model-icon">🤖</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">GPT OSS 20B</span>
-                                    <span class="swift-model-id">openai/gpt-oss-20b</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="openai/gpt-oss-safeguard-20b">
-                                <span class="swift-model-icon">🛡️</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">GPT OSS Safeguard 20B</span>
-                                    <span class="swift-model-id">openai/gpt-oss-safeguard-20b</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                            <button class="swift-model-option" data-model="qwen/qwen3-32b">
-                                <span class="swift-model-icon">🧠</span>
-                                <span class="swift-model-info">
-                                    <span class="swift-model-name">Qwen3 32B</span>
-                                    <span class="swift-model-id">qwen/qwen3-32b</span>
-                                </span>
-                                <span class="swift-model-check">✓</span>
-                            </button>
-                        </div>
-                    </div>
-                    <button id="swift-model-toggle-btn" class="swift-model-toggle-btn" type="button">
-                        <span class="swift-model-toggle-icon">⚡</span>
-                        <span class="swift-model-toggle-label" id="swift-model-current">Llama 4 Scout 17B</span>
-                        <span class="swift-model-toggle-arrow">▲</span>
-                    </button>
-                </div>
-
                 <div class="controls">
                     <img id="preview" alt="preview">
                     <input type="file" id="img-input" accept="image/*" style="display:none">
-                    <button id="img-upload-btn" class="icon-btn" type="button" onclick="document.getElementById('img-input').click()">🔗</button>
+                    <div class="swift-model-btn-wrap" id="swift-model-btn-wrap">
+                        <button id="img-upload-btn" class="icon-btn" type="button" aria-label="Attach image">🔗</button>
+                        <!-- SwiftChat Model Drop-up (positioned from this button) -->
+                        <div id="swift-model-dropup" class="swift-model-dropup hidden">
+                            <div class="swift-model-dropup-header">
+                                <span class="swift-model-dropup-title">⚡ Select Model</span>
+                            </div>
+                            <div class="swift-model-dropup-list" id="swift-model-list">
+                                <button class="swift-model-option active" data-model="meta-llama/llama-4-scout-17b-16e-instruct">
+                                    <span class="swift-model-icon">🦙</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">Llama 4 Scout 17B</span>
+                                        <span class="swift-model-id">meta-llama/llama-4-scout-17b-16e-instruct</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="llama-3.3-70b-versatile">
+                                    <span class="swift-model-icon">🦙</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">Llama 3.3 70B</span>
+                                        <span class="swift-model-id">llama-3.3-70b-versatile</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="meta-llama/llama-prompt-guard-2-22m">
+                                    <span class="swift-model-icon">🛡️</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">Prompt Guard 2 22M</span>
+                                        <span class="swift-model-id">meta-llama/llama-prompt-guard-2-22m</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="meta-llama/llama-prompt-guard-2-86m">
+                                    <span class="swift-model-icon">🛡️</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">Prompt Guard 2 86M</span>
+                                        <span class="swift-model-id">meta-llama/llama-prompt-guard-2-86m</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="openai/gpt-oss-120b">
+                                    <span class="swift-model-icon">🤖</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">GPT OSS 120B</span>
+                                        <span class="swift-model-id">openai/gpt-oss-120b</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="openai/gpt-oss-20b">
+                                    <span class="swift-model-icon">🤖</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">GPT OSS 20B</span>
+                                        <span class="swift-model-id">openai/gpt-oss-20b</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="openai/gpt-oss-safeguard-20b">
+                                    <span class="swift-model-icon">🛡️</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">GPT OSS Safeguard 20B</span>
+                                        <span class="swift-model-id">openai/gpt-oss-safeguard-20b</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                                <button class="swift-model-option" data-model="qwen/qwen3-32b">
+                                    <span class="swift-model-icon">🧠</span>
+                                    <span class="swift-model-info">
+                                        <span class="swift-model-name">Qwen3 32B</span>
+                                        <span class="swift-model-id">qwen/qwen3-32b</span>
+                                    </span>
+                                    <span class="swift-model-check">✓</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     
                     <textarea id="msg-input" placeholder="Meow... " rows="1"></textarea>
                     
