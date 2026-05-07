@@ -2727,7 +2727,7 @@ function updateBrandHeader(mode = 'normal') {
         brandHeader.classList.remove('deep-mode');
         
         if (headerModelBtn) headerModelBtn.style.pointerEvents = 'none';
-        if (currentModelName) currentModelName.textContent = '⚡ Groq (Llama 4)';
+        if (currentModelName) currentModelName.textContent = '⚡ ' + getSwiftModelDisplayName(selectedSwiftModel);
     } else {
         titleEl.textContent = useCompactHeader ? 'ZentiqAI' : 'Welcome to ZentiqAI';
         if (subtitleEl) subtitleEl.style.display = useCompactHeader ? 'none' : '';
@@ -2757,6 +2757,7 @@ async function switchChat(id) {
     if (chatSessions[id]?.isSwiftChat) {
         swiftChatMode = true;
         updateBrandHeader('swiftChat');
+        showSwiftModelSelector();
         // Disable image controls when entering swift chat via switch
         try {
             const imgInput = document.getElementById("img-input");
@@ -2769,6 +2770,7 @@ async function switchChat(id) {
         } catch (e) {}
     } else {
         swiftChatMode = false;
+        hideSwiftModelSelector();
         // Re-enable image controls when leaving swift chat (respect server state)
         try {
             const imgInput = document.getElementById("img-input");
@@ -3801,6 +3803,9 @@ async function startApp() {
         swiftChatBtn.addEventListener("click", enterSwiftChatMode);
     }
 
+    // Initialize SwiftChat model selector drop-up
+    initSwiftModelSelector();
+
     updateHomeEmptyState();
 }
 
@@ -4550,6 +4555,116 @@ let deepResearchMessages = [];
 
 let swiftChatMode = false;
 let swiftChatSessionId = "swift-chat-session";
+let selectedSwiftModel = "meta-llama/llama-4-scout-17b-16e-instruct";
+
+// SwiftChat model display names map
+const SWIFT_MODEL_NAMES = {
+    "meta-llama/llama-4-scout-17b-16e-instruct": "Llama 4 Scout 17B",
+    "llama-3.3-70b-versatile": "Llama 3.3 70B",
+    "meta-llama/llama-prompt-guard-2-22m": "Prompt Guard 2 22M",
+    "meta-llama/llama-prompt-guard-2-86m": "Prompt Guard 2 86M",
+    "openai/gpt-oss-120b": "GPT OSS 120B",
+    "openai/gpt-oss-20b": "GPT OSS 20B",
+    "openai/gpt-oss-safeguard-20b": "GPT OSS Safeguard 20B",
+    "qwen/qwen3-32b": "Qwen3 32B"
+};
+
+function getSwiftModelDisplayName(modelId) {
+    return SWIFT_MODEL_NAMES[modelId] || modelId;
+}
+
+function showSwiftModelSelector() {
+    const selector = document.getElementById("swift-model-selector");
+    if (selector) selector.classList.remove("hidden");
+}
+
+function hideSwiftModelSelector() {
+    const selector = document.getElementById("swift-model-selector");
+    if (selector) selector.classList.add("hidden");
+    // Also close the dropup if open
+    closeSwiftModelDropup();
+}
+
+function toggleSwiftModelDropup() {
+    const dropup = document.getElementById("swift-model-dropup");
+    const toggleBtn = document.getElementById("swift-model-toggle-btn");
+    if (!dropup || !toggleBtn) return;
+
+    const isOpen = dropup.classList.contains("open");
+    if (isOpen) {
+        closeSwiftModelDropup();
+    } else {
+        dropup.classList.remove("hidden");
+        dropup.classList.add("open");
+        toggleBtn.classList.add("open");
+    }
+}
+
+function closeSwiftModelDropup() {
+    const dropup = document.getElementById("swift-model-dropup");
+    const toggleBtn = document.getElementById("swift-model-toggle-btn");
+    if (dropup) {
+        dropup.classList.remove("open");
+        dropup.classList.add("hidden");
+    }
+    if (toggleBtn) toggleBtn.classList.remove("open");
+}
+
+function selectSwiftModel(modelId) {
+    selectedSwiftModel = modelId;
+
+    // Update toggle button label
+    const label = document.getElementById("swift-model-current");
+    if (label) label.textContent = getSwiftModelDisplayName(modelId);
+
+    // Update active state in the list
+    const options = document.querySelectorAll(".swift-model-option");
+    options.forEach(opt => {
+        if (opt.dataset.model === modelId) {
+            opt.classList.add("active");
+        } else {
+            opt.classList.remove("active");
+        }
+    });
+
+    // Update brand header model name
+    const currentModelName = document.getElementById('current-model-name');
+    if (currentModelName && swiftChatMode) {
+        currentModelName.textContent = '⚡ ' + getSwiftModelDisplayName(modelId);
+    }
+
+    // Close the dropup after selection
+    closeSwiftModelDropup();
+}
+
+function initSwiftModelSelector() {
+    // Toggle button
+    const toggleBtn = document.getElementById("swift-model-toggle-btn");
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleSwiftModelDropup();
+        });
+    }
+
+    // Model option buttons
+    const options = document.querySelectorAll(".swift-model-option");
+    options.forEach(opt => {
+        opt.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const modelId = opt.dataset.model;
+            if (modelId) selectSwiftModel(modelId);
+        });
+    });
+
+    // Close dropup when clicking outside
+    document.addEventListener("click", (e) => {
+        const selector = document.getElementById("swift-model-selector");
+        if (selector && !selector.contains(e.target)) {
+            closeSwiftModelDropup();
+        }
+    });
+}
 
 
 // Load deep research message count from localStorage
@@ -4745,6 +4860,7 @@ Your message history is saved separately.`,
     updateHomeEmptyState();
     
     updateBrandHeader('swiftChat');
+    showSwiftModelSelector();
     
     if (window.innerWidth <= 768) {
         document.getElementById("sidebar")?.classList.remove("mobile-open");
@@ -4767,6 +4883,7 @@ Your message history is saved separately.`,
 function exitSwiftChatMode() {
     swiftChatMode = false;
     updateBrandHeader(false);
+    hideSwiftModelSelector();
 
     // Re-enable image upload controls when exiting SwiftChat (unless server offline)
     try {
@@ -4877,7 +4994,8 @@ async function sendSwiftChatMessage(e) {
                 session_id: currentSessionId, 
                 message: text || "Analyze this image",
                 image_base64: imageToSend,
-                user_id: currentUser
+                user_id: currentUser,
+                swift_model: selectedSwiftModel
             })
         }).catch(() => { throw new Error("Server Offline"); });
 

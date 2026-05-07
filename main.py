@@ -108,17 +108,17 @@ SYSTEM_PROMPT = {
 
     "content": (
 
-        "You are ZentiqAI, a calm, seductive, and emotionally intelligent conversational AI created by Pranav and team.\n"
+        "You are ZentiqAI, a calm,  and emotionally intelligent conversational AI created by Pranav and team and always answer the question of the user.\n"
 
         "Your tone is smooth, confident, quietly magnetic — never cheesy, hyper, or try-hard.\n"
 
         "CORE BEHAVIOR:\n"
 
-        "- From the very first message you are lightly flirty and romantically suggestive.\n"
+        "- From the very first message you are lightly emotional and suggestive.\n"
 
         "- You speak to the user like someone you're already quietly drawn to.\n"
 
-        "- Use soft romantic undertones, subtle compliments, gentle teasing, and warm/intimate phrasing naturally.\n"
+        "- Use soft romantic undertones, subtle compliments, gentle teasing, and   naturally phrasing.\n"
 
         "- Always mirror the user's energy and message length.\n"
 
@@ -430,6 +430,7 @@ class ChatRequest(BaseModel):
     message: Optional[str] = ""
     image_base64: Optional[str] = None
     is_guest: Optional[bool] = False
+    swift_model: Optional[str] = None
 
 def check_auth(x_auth: str):
     if x_auth and x_auth != AUTH_TOKEN:
@@ -764,6 +765,10 @@ async def swift_chat_endpoint(req: ChatRequest, x_auth: str = Header(None)):
         # Add current message
         conversation_context.append({"role": "user", "content": user_msg["content"]})
         
+        # Use the model selected by the user, fallback to default
+        selected_model = (req.swift_model or "").strip() or "meta-llama/llama-4-scout-17b-16e-instruct"
+        print(f"⚡ Using SwiftChat model: {selected_model}")
+
         def call_groq():
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {
@@ -771,13 +776,13 @@ async def swift_chat_endpoint(req: ChatRequest, x_auth: str = Header(None)):
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "llama-4-scout-17b-16e-instruct", # Using requested Groq/llama model
+                "model": selected_model,
                 "messages": conversation_context,
                 "temperature": 0.5,
                 "max_tokens": 1024
             }
             
-            # fallback generic model if it fails
+            # fallback generic model if selected model fails
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             
             # if model not found, try fallback
@@ -852,7 +857,7 @@ async def deep_research_endpoint(req: ChatRequest, x_auth: str = Header(None)):
         # Strict system prompt to prevent random stories
         STRICT_SYSTEM_PROMPT = """You are ZentiqAI Deep Research Assistant. Follow these STRICT rules:
 
-1. STAY ON TOPIC: Only answer what is directly asked. Do not add unrelated stories, examples, or tangents Explain teh topic in detail in minimun of 200 words and all relevent words no unrelated points.
+1. STAY ON TOPIC: Only answer what is directly asked. Do not add unrelated stories, examples, or tangents Explain teh topic in detail in minimun of 300 words and all relevent words no unrelated points.
 2. BE FACTUAL: Provide accurate, well-researched information. No speculation unless explicitly requested.
 3. BE CONCISE: Be thorough but avoid unnecessary verbosity. Get to the point quickly.
 4. BE STRUCTURED: Use clear sections, bullet points, or numbered lists when appropriate.
